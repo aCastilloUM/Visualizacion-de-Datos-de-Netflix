@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 # Importá cada pregunta como módulos independientes
-from questions import q1_proporcion_peliculas_series, q2_evolucion_estrenos, q6_generos_estacionales
+from questions import q2_evolucion_estrenos as q2
 
 DATA_PATH = os.getenv(
     "DATA_PATH",
@@ -28,12 +28,6 @@ def main():
     pivot_q2 = q2_evolucion_estrenos.run(df, outdir=OUTDIR)
     print("[Q2] Estrenos por año y tipo (primeras filas):")
     print(pivot_q2.head())
-
-    print("\n")
-
-    # ---- Pregunta 6 ----
-    print("question 6")
-    pivot_q6 = q6_generos_estacionales.estacionalidad_generos(df, outdir=OUTDIR)
 
     # Aquí seguirías con:
     # from questions import q1_proporcion, q3_paises, ...
