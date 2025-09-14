@@ -8,10 +8,7 @@ COLOR_MOVIE = "#e50914"
 COLOR_MOVIE_ALT = "#b20710"
 COLOR_TV = "#221f1f"
 
-def apply_netflix_style(ax=None):
-    """
-    Aplica estilo de fondo y grilla a un gráfico de Matplotlib.
-    """
+def apply_netflix_style(ax=None):  
     if ax is None:
         ax = plt.gca()
     ax.set_facecolor(COLOR_BG)
@@ -19,10 +16,7 @@ def apply_netflix_style(ax=None):
     ax.grid(alpha=0.3, linestyle="--", axis="y")
     return ax
 
-def add_source_note(text: str = "Fuente: Netflix dataset. Elaboración propia"):
-    """
-    Agrega una nota de fuente abajo a la derecha de la figura activa.
-    """
+def add_source_note(text: str = "Fuente: Netflix dataset. Elaboración propia"):    
     plt.figtext(
         0.99, 0.01, text,
         ha="right", va="bottom",

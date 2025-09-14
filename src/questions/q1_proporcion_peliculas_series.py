@@ -71,7 +71,7 @@ def _graficar_proporcion(conteo: pd.DataFrame, outpath: str) -> None:
     ax.grid(True, axis="y", alpha=0.2, linestyle="--")
     ax.legend(title="Tipo de contenido")
 
-    ps.add_source_note("Fuente: Netflix dataset. Elaboración propia")
+    ps.add_source_note()
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()

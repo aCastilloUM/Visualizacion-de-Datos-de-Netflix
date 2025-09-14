@@ -1,95 +1,109 @@
-# -*- coding: utf-8 -*-
+# Pregunta 6:
+# ¿Se identifica alguna estacionalidad en los estrenos según la categoría (listed_in)?
+# ¿Qué meses concentran más lanzamientos?
+# Gráficos: heatmap (mes × categoría) + barras por mes (totales)
+# Salidas: outputs/q6/q6_heatmap_categorias.png, outputs/q6/q6_barras_meses.png
+
+from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
-PALETA = {
-    "fondo": "#f5f5f1",
-    "grilla": "#221f1f",
-    "acento": "#e50914",
-}
-
-# ---------------------------
-# Preparación de datos
-# ---------------------------
-def preparar_estacionalidad(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    df["date_added"] = pd.to_datetime(df["date_added"], errors="coerce")
-    df = df.dropna(subset=["date_added", "listed_in"])
-    df["mes"] = df["date_added"].dt.month
-
-    # Explode de categorías
-    df["listed_in"] = df["listed_in"].astype(str).str.split(",")
-    df = df.explode("listed_in")
-    df["listed_in"] = df["listed_in"].str.strip()
-    df = df[df["listed_in"].ne("")]
-
-    return df
+from utils import plot_style as ps
+from utils import cleaning as cl
 
 def _month_labels():
-    return ["Ene","Feb","Mar","Abr","May","Jun",
-            "Jul","Ago","Sep","Oct","Nov","Dic"]
+    return ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
-# ---------------------------
-# Gráficos
-# ---------------------------
-def heatmap_estacionalidad(df: pd.DataFrame, out_png_path: str):
-    tabla = df.pivot_table(
-        index="mes", columns="listed_in", values="title",
-        aggfunc="count", fill_value=0
-    ).reindex(range(1, 13), fill_value=0)
+#  Reindexa a meses 1..12. Soporta Series o DataFrames con index numérico de mes.
 
-    plt.figure(figsize=(max(10, len(tabla.columns) * 0.35), 6), facecolor=PALETA["fondo"])
+def _ensure_month_order(obj):
+
+    return obj.reindex(range(1, 13), fill_value=0)
+
+# Preparación
+def _prepare_estacionalidad(df: pd.DataFrame) -> pd.DataFrame:
+
+    dfx = cl.ensure_datetime(df, "date_added")
+    dfx = dfx.dropna(subset=["date_added", "listed_in"]).copy()
+    dfx["mes"] = dfx["date_added"].dt.month
+    dfx = cl.explode_listed_in(dfx)  
+    return dfx
+
+
+# Plots
+
+def _plot_heatmap_estacionalidad(df: pd.DataFrame, out_png_path: str):
+    tabla = (
+        df.pivot_table(index="mes", columns="listed_in", values="title", aggfunc="count", fill_value=0)
+          .sort_index()
+    )
+    tabla = _ensure_month_order(tabla)
+
+    plt.figure(figsize=(max(10, len(tabla.columns) * 0.35), 6), facecolor=ps.COLOR_BG)
     ax = plt.gca()
+    ps.apply_netflix_style(ax)
+
     im = ax.imshow(tabla.values, aspect="auto")
 
     ax.set_yticks(range(12))
     ax.set_yticklabels(_month_labels())
     ax.set_xticks(range(len(tabla.columns)))
-    ax.set_xticklabels(list(tabla.columns), rotation=30, ha="right")
+    ax.set_xticklabels(tabla.columns.tolist(), rotation=30, ha="right", fontsize=9)
 
-    ax.set_title("Estacionalidad de estrenos por categoría (meses × categorías)")
+    ax.set_title("Estacionalidad de estrenos por categoría (mes × categoría)", fontsize=13, color=ps.COLOR_TV)
+
     cbar = plt.colorbar(im, ax=ax, fraction=0.03, pad=0.03)
     cbar.set_label("# estrenos")
 
-    plt.figtext(0.01, -0.02, "Fuente: Netflix dataset. Elaboración propia.",
-                ha="left", va="top", fontsize=9)
-
-    os.makedirs(os.path.dirname(out_png_path), exist_ok=True)
+    ps.add_source_note()  
     plt.tight_layout()
-    plt.savefig(out_png_path, dpi=200, bbox_inches="tight")
+    os.makedirs(os.path.dirname(out_png_path), exist_ok=True)
+    plt.savefig(out_png_path, dpi=220, facecolor=ps.COLOR_BG, bbox_inches="tight")
     plt.close()
-    print(f"Heatmap guardado en: {out_png_path}")
 
-def barras_totales_por_mes(df: pd.DataFrame, out_png_path: str):
-    totales_mes = df.groupby("mes")["title"].count().reindex(range(1, 13), fill_value=0)
+def _plot_barras_totales_por_mes(df: pd.DataFrame, out_png_path: str):
+    tot_mes = df.groupby("mes")["title"].count().sort_index()
+    tot_mes = _ensure_month_order(tot_mes)
 
-    plt.figure(figsize=(9, 5), facecolor=PALETA["fondo"])
+    plt.figure(figsize=(10, 5.5), facecolor=ps.COLOR_BG)
     ax = plt.gca()
-    ax.bar(range(12), totales_mes.values, width=0.7, color=PALETA["acento"], edgecolor="black")
+    ps.apply_netflix_style(ax)
+
+    ax.bar(range(12), tot_mes.values, width=0.7, color=ps.COLOR_MOVIE, edgecolor=ps.COLOR_TV, linewidth=0.6)
 
     ax.set_xticks(range(12))
-    ax.set_xticklabels(_month_labels(), rotation=0)
-    ax.set_ylabel("# estrenos")
-    ax.set_title("Cantidad total de estrenos por mes (todas las categorías)")
-    ax.grid(axis="y", color=PALETA["grilla"], alpha=0.15)
+    ax.set_xticklabels(_month_labels())
+    ax.set_ylabel("# estrenos", color=ps.COLOR_TV)
+    ax.set_title("Cantidad total de estrenos por mes (todas las categorías)", fontsize=13, color=ps.COLOR_TV)
 
-    plt.figtext(0.01, -0.02, "Fuente: Netflix dataset. Elaboración propia.",
-                ha="left", va="top", fontsize=9)
+    ax.grid(axis="y", alpha=0.25, linestyle="--")
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True, min_n_ticks=6))
 
-    os.makedirs(os.path.dirname(out_png_path), exist_ok=True)
+    ps.add_source_note()
     plt.tight_layout()
-    plt.savefig(out_png_path, dpi=200, bbox_inches="tight")
+    os.makedirs(os.path.dirname(out_png_path), exist_ok=True)
+    plt.savefig(out_png_path, dpi=220, facecolor=ps.COLOR_BG, bbox_inches="tight")
     plt.close()
-    print(f"Barras por mes guardadas en: {out_png_path}")
 
-# ---------------------------
-# Función principal
-# ---------------------------
-def estacionalidad_generos(df: pd.DataFrame, outdir: str = "outputs"):
-    base = preparar_estacionalidad(df)
+def run(df: pd.DataFrame, outdir: str = "outputs") -> dict:
+    outdir_q6 = os.path.join(outdir, "q6")
+    os.makedirs(outdir_q6, exist_ok=True)
 
-    heatmap_estacionalidad(base, out_png_path=os.path.join(outdir, "q6_heatmap_categorias.png"))
-    barras_totales_por_mes(base, out_png_path=os.path.join(outdir, "q6_barras_meses.png"))
+    base = _prepare_estacionalidad(df)
 
-    return None
+    tabla_mes_categoria = (
+        base.pivot_table(index="mes", columns="listed_in", values="title", aggfunc="count", fill_value=0)
+            .sort_index()
+    )
+    totales_mes = base.groupby("mes")["title"].count().sort_index()
+
+    _plot_heatmap_estacionalidad(base, os.path.join(outdir_q6, "q6_heatmap_categorias.png"))
+    _plot_barras_totales_por_mes(base, os.path.join(outdir_q6, "q6_barras_meses.png"))
+
+    return {
+        "base": base,
+        "tabla_mes_categoria": tabla_mes_categoria,
+        "totales_mes": totales_mes,
+    }

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Pregunta 2: ¿Cómo evolucionó la cantidad de estrenos a lo largo del tiempo para cada tipo de contenido?
-# Paleta Netflix + nota de fuente (utils/plot_style.py)
+# - Usa utils.cleaning.add_year_and_month para extraer year_added
+# - Usa utils.plot_style para estilo y nota de fuente
+# - Salidas: outputs/q2/q2_lineas_estrenos.png y outputs/q2/q2_area_apilada.png
+# - Interfaz: run(df, outdir="outputs") -> devuelve pivot con columnas ['Movie','TV Show']
 
 from __future__ import annotations
 import os
@@ -8,19 +11,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-from utils import plot_style as ps  # <<< estilos + fuente
-
-def _parse_year_from_date_added(df: pd.DataFrame) -> pd.DataFrame:
-    df2 = df.copy()
-    df2["date_added"] = pd.to_datetime(df2["date_added"], errors="coerce")
-    df2["year_added"] = df2["date_added"].dt.year
-    return df2
+from utils import plot_style as ps
+from utils import cleaning as cl
 
 def _aggregate_releases_by_year_and_type(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Genera una tabla por año con conteos de Movie y TV Show a partir de 'date_added'.
+    """
+    df2 = cl.add_year_and_month(df)  # añade year_added y month_added desde date_added
     grp = (
-        df.dropna(subset=["year_added"])
-          .groupby(["year_added", "type"], as_index=False)
-          .size()
+        df2.dropna(subset=["year_added", "type"])
+           .groupby(["year_added", "type"], as_index=False)
+           .size()
     )
     pivot = grp.pivot(index="year_added", columns="type", values="size").fillna(0).astype(int)
     pivot = pivot.sort_index()
@@ -41,12 +43,11 @@ def _plot_lines(pivot: pd.DataFrame, outpath: str) -> None:
     ax.set_xlabel("Año de agregado", color=ps.COLOR_TV)
     ax.set_ylabel("Cantidad de estrenos", color=ps.COLOR_TV)
 
-    # Ticks de año más legibles (enteros)
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True, prune=None))
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.grid(True, alpha=0.3)
     ax.legend()
 
-    ps.add_source_note("Fuente: Netflix dataset. Elaboración propia")
+    ps.add_source_note()  # "Fuente: Netflix dataset"
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()
@@ -70,7 +71,7 @@ def _plot_area_stacked(pivot: pd.DataFrame, outpath: str) -> None:
     ax.set_ylabel("Cantidad de estrenos", color=ps.COLOR_TV)
     ax.legend(loc="upper left")
 
-    ps.add_source_note("Fuente: Netflix dataset. Elaboración propia")
+    ps.add_source_note()
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()
@@ -79,8 +80,7 @@ def run(df: pd.DataFrame, outdir: str = "outputs") -> pd.DataFrame:
     outdir_q2 = os.path.join(outdir, "q2")
     os.makedirs(outdir_q2, exist_ok=True)
 
-    df2 = _parse_year_from_date_added(df)
-    pivot = _aggregate_releases_by_year_and_type(df2)
+    pivot = _aggregate_releases_by_year_and_type(df)
 
     _plot_lines(pivot, os.path.join(outdir_q2, "q2_lineas_estrenos.png"))
     _plot_area_stacked(pivot, os.path.join(outdir_q2, "q2_area_apilada.png"))
