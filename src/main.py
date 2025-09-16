@@ -16,7 +16,7 @@ from questions import q10_palabras as q10
 
 DATA_PATH = os.getenv(
     "DATA_PATH",
-    r"C:\\Users\\agust\\OneDrive\\Escritorio\\Estudio\\Semestres\\6to Semestre\\Análisis de Datos\\netflix.csv"
+    r"C:\Users\Usuario\OneDrive - Universidad de Montevideo\Analisis de Datos\netflix (2).csv"
 )
 OUTDIR = os.getenv("OUTDIR", "outputs")
 

@@ -115,47 +115,6 @@ def _plot_barh_top_counts(pv_counts: pd.DataFrame, outpath: str):
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()
 
-def _plot_stacked100_by_rating(props_rating: pd.DataFrame, outpath: str):
-    """
-    Barras horizontales apiladas 100%: distribución por rating para Top actores.
-    """
-    if props_rating.empty:
-        return
-
-    df = props_rating.copy()
-    # Ordenar columnas: ratings primero (según RATING_ORDER), ignorando 'Total'
-    cols = [c for c in df.columns if c != "Total"]
-    plt.figure(figsize=(14, max(6, 0.55 * len(df))), facecolor=ps.COLOR_BG)
-    ax = plt.gca()
-    ps.apply_netflix_style(ax)
-
-    y = list(range(len(df)))
-    bar_h = 0.6
-    left = [0.0] * len(df)
-
-    # Apilar cada rating como segmento
-    for col in cols:
-        vals = df[col].values
-        ax.barh(y, vals, height=bar_h, left=left, label=col)
-        left = [l + v for l, v in zip(left, vals)]
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(df.index.tolist())
-    ax.set_xlabel("Proporción por rating", color=ps.COLOR_TV)
-    ax.set_title("Distribución por rating (100%) para actores Top", fontsize=13, color=ps.COLOR_TV)
-
-    ax.set_xlim(0, 1)
-    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
-    ax.set_xticklabels([f"{int(v*100)}%" for v in [0, 25, 50, 75, 100]])
-
-    ax.grid(axis="x", alpha=0.25, linestyle="--")
-    ax.legend(loc="lower right", ncol=2, fontsize=8)
-
-    ps.add_source_note()
-    plt.tight_layout()
-    plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG, bbox_inches="tight")
-    plt.close()
-
 def _plot_heatmap_actors_ratings(pv_rating: pd.DataFrame, outpath: str):
     if pv_rating.empty:
         return
@@ -278,7 +237,6 @@ def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
 
     # Gráficos
     _plot_barh_top_counts(pv_counts, os.path.join(outdir_q8, "q8_top_actores_count_barh.png"))
-    _plot_stacked100_by_rating(props_rating, os.path.join(outdir_q8, "q8_top_actores_rating_stacked100.png"))
     _plot_heatmap_actors_ratings(pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_heatmap.png"))
     # Donuts (círculos) de resumen
     _plot_donut_ratings( pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_donut.png"))

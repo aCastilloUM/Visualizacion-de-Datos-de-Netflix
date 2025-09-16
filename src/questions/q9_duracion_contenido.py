@@ -32,14 +32,16 @@ def _plot_hist_tvshows(df: pd.DataFrame, outpath: str):
     if data.empty:
         return
     # Usar bins más pequeños para mayor detalle en el eje X
-    bins = np.arange(0.5, data.max() + 1.5, 0.5)  # medio entero para más valores
+    bins = np.arange(1, data.max() + 2, 1)  # medio entero para más valores
     plt.figure(figsize=(9, 5), facecolor=ps.COLOR_BG)
     ax = plt.gca()
     ps.apply_netflix_style(ax)
-    ax.hist(data, bins=bins, color=ps.COLOR_TV, edgecolor=ps.COLOR_MOVIE, alpha=0.85)
+    ax.hist(data, bins=bins, color=ps.COLOR_MOVIE, edgecolor=ps.COLOR_MOVIE, alpha=0.85)
     ax.set_xlabel("Cantidad de temporadas", color=ps.COLOR_TV)
     ax.set_ylabel("# Series", color=ps.COLOR_TV)
     ax.set_title("Distribución de duración de series (temporadas)", fontsize=13, color=ps.COLOR_TV)
+    ax.set_xticks(np.arange(1, int(data.max()) + 1, 1))
+
     ps.add_source_note("Fuente: Netflix dataset. Elaboración propia")
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
