@@ -186,6 +186,80 @@ def _plot_heatmap_actors_ratings(pv_rating: pd.DataFrame, outpath: str):
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG, bbox_inches="tight")
     plt.close()
 
+def _plot_donut(series: pd.Series, title: str, outpath: str):
+    """
+    Donut chart genérico para una Serie (index=categorías, values=conteos).
+    Oculta etiquetas si hay muchas categorías y deja leyenda a la derecha.
+    """
+    if series is None or series.empty:
+        return
+
+    # Ordenar desc y filtrar ceros
+    s = series[series > 0].sort_values(ascending=False)
+    if s.empty:
+        return
+
+    # Si hay demasiadas categorías, mostramos top-8 y agrupamos 'Otros'
+    if len(s) > 8:
+        top = s.iloc[:8]
+        otros = pd.Series({"Otros": s.iloc[8:].sum()})
+        s = pd.concat([top, otros])
+
+    plt.figure(figsize=(8, 6), facecolor=ps.COLOR_BG)
+    ax = plt.gca()
+    ps.apply_netflix_style(ax)
+
+    wedges, texts = ax.pie(
+        s.values,
+        startangle=90,
+        counterclock=False,
+        wedgeprops=dict(width=0.38, edgecolor=ps.COLOR_BG),
+        labels=None  # evitamos saturar con etiquetas
+    )
+
+    # Donut: círculo central
+    centre_circle = plt.Circle((0, 0), 0.62, fc=ps.COLOR_BG)
+    fig = plt.gcf()
+    fig.gca().add_artist(centre_circle)
+
+    ax.set_title(title, fontsize=13, color=ps.COLOR_TV)
+
+    # Leyenda a la derecha
+    ax.legend(
+        wedges, s.index.tolist(),
+        title="Categorías",
+        loc="center left", bbox_to_anchor=(1.0, 0.5),
+        frameon=False
+    )
+
+    ps.add_source_note()
+    plt.tight_layout()
+    plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG, bbox_inches="tight")
+    plt.close()
+
+
+def _plot_donut_ratings(pv_rating: pd.DataFrame, outpath: str):
+    """
+    Donut de distribución de ratings entre todos los títulos de los actores TOP.
+    Usa la tabla actor × rating (pv_rating) ya construida.
+    """
+    if pv_rating is None or pv_rating.empty:
+        return
+    # Sumamos por columna (rating). Quitamos 'Total' si está.
+    s = pv_rating.drop(columns=[c for c in ["Total"] if c in pv_rating.columns], errors="ignore").sum(axis=0)
+    _plot_donut(s, "Distribución de ratings (actores Top)", outpath)
+
+
+def _plot_donut_types(base: pd.DataFrame, top_idx: pd.Index, outpath: str):
+    """
+    Donut de distribución por tipo (Movie vs TV Show) SOLO para títulos de actores Top.
+    """
+    if base is None or base.empty or top_idx is None or len(top_idx) == 0:
+        return
+    sub = base[base["cast_final"].isin(top_idx)]
+    s = sub["type"].value_counts()
+    _plot_donut(s, "Distribución por tipo (actores Top)", outpath)
+
 
 def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
 
@@ -206,6 +280,9 @@ def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
     _plot_barh_top_counts(pv_counts, os.path.join(outdir_q8, "q8_top_actores_count_barh.png"))
     _plot_stacked100_by_rating(props_rating, os.path.join(outdir_q8, "q8_top_actores_rating_stacked100.png"))
     _plot_heatmap_actors_ratings(pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_heatmap.png"))
+    # Donuts (círculos) de resumen
+    _plot_donut_ratings( pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_donut.png"))
+    _plot_donut_types(base, top_idx, os.path.join(outdir_q8, "q8_top_actores_type_donut.png"))
 
     return {
         "base": base,              # DF expandido con cast_final

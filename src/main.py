@@ -28,6 +28,7 @@ def main():
     pivot_q1 = q1.run(df, outdir=OUTDIR)
     print("[Q1] Proporciones (primeras filas):")
     print(pivot_q1.head())
+    print()
 
     # ---- Pregunta 2 ----
     pivot_q2 = q2.run(df, outdir=OUTDIR)
@@ -49,37 +50,53 @@ def main():
     pivot_q4 = q4.run(df, outdir=OUTDIR)
     print("[Q4] Rating vs Tipo:")
     print(pivot_q4["counts"].head())  
+    print()
 
     # ---- Pregunta 5 ----
     pivot_q5 = q5.run(df, outdir=OUTDIR)
     print("[Q5] Audiencia vs Pais:")
     print(pivot_q5["top1_10"].head())
+    print()
 
     # ---- Pregunta 6 ----
     pivot_q6 = q6.run(df, outdir=OUTDIR)
     print("[Q6] tabla mes×categoría (shape):", pivot_q6["tabla_mes_categoria"].shape)
     print("[Q6] totales por mes (primeros):")
     print(pivot_q6["totales_mes"].head())
+    print()
 
     # ---- Pregunta 7 ----
     pivot_q7 = q7.run(df, outdir=OUTDIR, topn=20)
     print("[Q7] Top 20 directores por tipo (primeras filas):")
     print(pivot_q7["pivot_tipo"].tail())  
+    print()
 
     # ---- Pregunta 8 ----
     pivot_q8 = q8.run(df, outdir=OUTDIR)
     print("[Q8] Top actores por cantidad de títulos (primeras filas):")
+    print(pivot_q8["ranking"].head())
+    print()
 
     # ---- Pregunta 9 ----
     res_q9 = q9.run(df, outdir=OUTDIR)
     print("[Q9] Duración de películas y series:")
     print(res_q9["movies"].head())
     print(res_q9["tvshows"].head())
+    print()
+
 
     # ---- Pregunta 10 ----
     res_q10 = q10.run(df, outdir=OUTDIR, topn=20)
+    print("[Q10] Top palabras en títulos y descripciones:")
+    print()
+    print("Palabras en Títulos:")
+    print()
     print(res_q10["top_words_titles"].tail())        # últimas = más frecuentes
+    print()
+    print("Palabras en Descripciones:")
+    print()
     print(res_q10["top_words_descriptions"].tail())
+    print()
 
 
 if __name__ == "__main__":

@@ -54,10 +54,10 @@ def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
     top_titles = cl.count_top_words(df["title"],   topn=topn, min_len=3)
     top_desc   = cl.count_top_words(df["description"], topn=topn, min_len=3)
 
-    # Gráficos (usamos colores distintos para diferenciarlos)
-    _plot_top_words_barh(top_titles, "Top palabras en títulos", ps.COLOR_MOVIE,
+    color_rojo = "red"
+    _plot_top_words_barh(top_titles, "Top palabras en títulos", color_rojo,
                          os.path.join(outdir_q10, "q10_top_words_titles.png"))
-    _plot_top_words_barh(top_desc,   "Top palabras en descripciones", ps.COLOR_TV,
+    _plot_top_words_barh(top_desc,   "Top palabras en descripciones", color_rojo,
                          os.path.join(outdir_q10, "q10_top_words_descriptions.png"))
 
     return {

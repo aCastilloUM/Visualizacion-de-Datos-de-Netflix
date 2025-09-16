@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 import re
-import unicodedata
 import difflib
 from typing import Dict, List
 import pandas as pd
+import collections
+import numpy as np
+
 
 # ---------------- Países ----------------
 COUNTRY_ALIASES: Dict[str, str] = {
@@ -190,38 +192,56 @@ def expand_and_normalize_cast(df: pd.DataFrame) -> pd.DataFrame:
     return dfx
 
 # ---------------- Duraciones ----------------
-import re
-import pandas as pd
+
 
 def normalize_duration(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Normaliza la columna 'duration' en dos columnas nuevas:
-    - duration_minutes (para Movies)
-    - duration_seasons (para TV Shows)
+    Normaliza 'type' y parsea 'duration' según los formatos del dataset:
+      - Películas: 'N min'      -> duration_minutes = N
+      - Series:    'N Season(s)'-> duration_seasons = N
+
+    NOTA: según tus ejemplos no aparecen horas ('1h 30m'), por eso simplificamos.
     """
     dfx = df.copy()
-    dfx["duration"] = dfx["duration"].fillna("").astype(str).str.strip()
 
-    # Películas (minutos)
-    dfx.loc[dfx["type"] == "Movie", "duration_minutes"] = (
-        dfx.loc[dfx["type"] == "Movie", "duration"]
-        .str.extract(r"(\d+)")
-        .astype(float)
+    # 1) Normalizar 'type' a valores canónicos
+    def _norm_type(x: str) -> str:
+        s = str(x).strip().lower().replace("-", " ")
+        s = re.sub(r"\s+", " ", s)
+        if s in {"movie", "pelicula", "películas"}:
+            return "Movie"
+        if s in {"tv show", "tv shows", "serie", "series"}:
+            return "TV Show"
+        return str(x).strip()  # fallback si viene algo raro
+
+    dfx["type"] = dfx["type"].map(_norm_type)
+
+    # 2) Normalizar 'duration' -> str lowercase
+    dur = dfx["duration"].fillna("").astype(str).str.strip()
+    dur_low = dur.str.lower()
+
+    # Columnas de salida
+    dfx["duration_minutes"] = np.nan
+    dfx["duration_seasons"] = np.nan
+
+    # 3) Parseo directo según el texto
+    #    a) Minutos: 'NN min'
+    is_min = dur_low.str.contains(r"\bmin\b")
+    dfx.loc[is_min, "duration_minutes"] = (
+        dur_low[is_min].str.extract(r"(\d+)\s*min", expand=False).astype(float)
     )
 
-    # Series (temporadas)
-    dfx.loc[dfx["type"] == "TV Show", "duration_seasons"] = (
-        dfx.loc[dfx["type"] == "TV Show", "duration"]
-        .str.extract(r"(\d+)")
-        .astype(float)
+    #    b) Temporadas: 'N Season' / 'N Seasons'
+    is_season = dur_low.str.contains(r"season")
+    dfx.loc[is_season, "duration_seasons"] = (
+        dur_low[is_season].str.extract(r"(\d+)\s*season", expand=False).astype(float)
     )
 
     return dfx
 
+
 # ---------------- Text Mining (EN) ----------------
-import re
-import collections
-import pandas as pd
+
 
 ENGLISH_STOPWORDS = {
     # básicos comunes
