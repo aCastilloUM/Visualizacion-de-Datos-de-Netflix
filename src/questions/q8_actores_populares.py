@@ -1,39 +1,30 @@
-# -*- coding: utf-8 -*-
 # Pregunta 8:
 # ¿Cuáles son los actores más populares?
-# - Top-N por cantidad de títulos (conteo bruto)
-# - Distribución por rating para esos actores (barras apiladas 100%)
-# - Heatmap actores × rating (conteos)
-#
-# Limpieza reutilizable:
-# - utils.cleaning.expand_and_normalize_cast  (cast -> cast_final)
-# - utils.cleaning.normalize_and_explode_ratings  (rating -> rating_norm)
-#
-# Estilo:
-# - utils.plot_style (paleta Netflix + add_source_note)
-#
-# Salidas:
-# - outputs/q8/q8_top_actores_count_barh.png             (ranking por conteo)
-# - outputs/q8/q8_top_actores_rating_stacked100.png      (distribución por rating, 100%)
-# - outputs/q8/q8_top_actores_rating_heatmap.png         (heatmap actores × rating)
-#
-# Interfaz:
-# - run(df, outdir="outputs", topn=20) -> dict con pivots/tablas para revisar
-#     Pipeline Q8:
-#    1) Expande/normaliza el elenco (cast_final).
-#    2) Selecciona Top-N actores por total de títulos.
-#    3) Genera:
-#       - Ranking por conteo (barh)
-#       - Distribución por rating 100% (stacked barh)
-#       - Heatmap actores × rating (conteos)
-#    Devuelve dict con DataFrames útiles.
+
+# Pipeline:
+# 1. Limpiar y expandir la columna 'cast' con expand_and_normalize_cast
+# 2. Normalizar ratings con normalize_and_explode_ratings
+# 3. Calcular ranking de actores por cantidad de títulos
+# 4. Calcular pivotes por rating y proporciones
+# 5. Graficar ranking, distribución por rating y heatmap
+
+# Outputs:
+# - outputs/q8/q8_top_actores_count_barh.png
+# - outputs/q8/q8_top_actores_rating_stacked100.png
+# - outputs/q8/q8_top_actores_rating_heatmap.png
+# - outputs/q8/q8_top_actores_rating_donut.png
+# - outputs/q8/q8_top_actores_type_donut.png
+
+# Cleaning:
+# - cl.expand_and_normalize_cast(df): Limpia y expande la columna 'cast' para agrupar correctamente los actores.
+# - cl.normalize_and_explode_ratings(df): Normaliza los ratings y explota múltiples valores para mapear correctamente por actor.
+
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
 from utils import plot_style as ps
 from utils import cleaning as cl
 
@@ -54,24 +45,19 @@ def _prepare_cast_base(df: pd.DataFrame) -> pd.DataFrame:
     dfx["type"] = dfx["type"].astype(str).str.strip()
     return dfx
 
+# Índice con los nombres del Top-N actores por cantidad total de títulos.
 def _top_actors(dfx: pd.DataFrame, topn: int = 20) -> pd.Index:
     counts = dfx.groupby("cast_final").size().sort_values(ascending=False)
     return counts.head(topn).index
 
-# Pivots
+# Conteo total por actor (solo Top-N)
 def _pivot_actor_counts(dfx: pd.DataFrame, top_idx: pd.Index) -> pd.DataFrame:
-    """
-    Conteo total de títulos por actor (Top-N).
-    """
     sub = dfx[dfx["cast_final"].isin(top_idx)]
     pv = sub.groupby("cast_final").size().sort_values(ascending=True)  # asc para barh
     return pv.to_frame(name="Total")
 
+# Conteo por actor × rating_norm (solo Top-N).
 def _pivot_actor_by_rating(dfx: pd.DataFrame, top_idx: pd.Index) -> pd.DataFrame:
-    """
-    Conteo por actor × rating_norm (solo Top-N). 
-    Usa ratings normalizados y explota múltiples si los hubiera.
-    """
     r = cl.normalize_and_explode_ratings(dfx)
     sub = r[r["cast_final"].isin(top_idx)]
     grp = sub.groupby(["cast_final", "rating_norm"], as_index=False).size()
@@ -94,9 +80,7 @@ def _pivot_props_from_rating(pv_rating: pd.DataFrame) -> pd.DataFrame:
     props["Total"] = row_sum
     return props
 
-# Plot
 def _plot_barh_top_counts(pv_counts: pd.DataFrame, outpath: str):
-
     if pv_counts.empty:
         return
 
@@ -120,7 +104,6 @@ def _plot_heatmap_actors_ratings(pv_rating: pd.DataFrame, outpath: str):
         return
 
     df = pv_rating.drop(columns=["Total"]).copy()
-    # Asegurar orden columnas por RATING_ORDER + otros
     ordered = [c for c in RATING_ORDER if c in df.columns] + [c for c in df.columns if c not in RATING_ORDER]
     df = df[ordered]
 
@@ -146,19 +129,14 @@ def _plot_heatmap_actors_ratings(pv_rating: pd.DataFrame, outpath: str):
     plt.close()
 
 def _plot_donut(series: pd.Series, title: str, outpath: str):
-    """
-    Donut chart genérico para una Serie (index=categorías, values=conteos).
-    Oculta etiquetas si hay muchas categorías y deja leyenda a la derecha.
-    """
     if series is None or series.empty:
         return
 
-    # Ordenar desc y filtrar ceros
     s = series[series > 0].sort_values(ascending=False)
     if s.empty:
         return
 
-    # Si hay demasiadas categorías, mostramos top-8 y agrupamos 'Otros'
+    # Si hay demasiadas categorías, mostramos top-8 y agrupamos en Otros
     if len(s) > 8:
         top = s.iloc[:8]
         otros = pd.Series({"Otros": s.iloc[8:].sum()})
@@ -173,17 +151,15 @@ def _plot_donut(series: pd.Series, title: str, outpath: str):
         startangle=90,
         counterclock=False,
         wedgeprops=dict(width=0.38, edgecolor=ps.COLOR_BG),
-        labels=None  # evitamos saturar con etiquetas
+        labels=None  # no saturar con etiquetas
     )
 
-    # Donut: círculo central
     centre_circle = plt.Circle((0, 0), 0.62, fc=ps.COLOR_BG)
     fig = plt.gcf()
     fig.gca().add_artist(centre_circle)
 
     ax.set_title(title, fontsize=13, color=ps.COLOR_TV)
 
-    # Leyenda a la derecha
     ax.legend(
         wedges, s.index.tolist(),
         title="Categorías",
@@ -198,21 +174,13 @@ def _plot_donut(series: pd.Series, title: str, outpath: str):
 
 
 def _plot_donut_ratings(pv_rating: pd.DataFrame, outpath: str):
-    """
-    Donut de distribución de ratings entre todos los títulos de los actores TOP.
-    Usa la tabla actor × rating (pv_rating) ya construida.
-    """
     if pv_rating is None or pv_rating.empty:
         return
-    # Sumamos por columna (rating). Quitamos 'Total' si está.
     s = pv_rating.drop(columns=[c for c in ["Total"] if c in pv_rating.columns], errors="ignore").sum(axis=0)
     _plot_donut(s, "Distribución de ratings (actores Top)", outpath)
 
 
 def _plot_donut_types(base: pd.DataFrame, top_idx: pd.Index, outpath: str):
-    """
-    Donut de distribución por tipo (Movie vs TV Show) SOLO para títulos de actores Top.
-    """
     if base is None or base.empty or top_idx is None or len(top_idx) == 0:
         return
     sub = base[base["cast_final"].isin(top_idx)]
@@ -228,23 +196,19 @@ def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
     base = _prepare_cast_base(df)
     top_idx = _top_actors(base, topn=topn)
 
-    # Ranking (conteo)
     pv_counts = _pivot_actor_counts(base, top_idx)
 
-    # Distribución por rating (conteos y 100%)
     pv_rating = _pivot_actor_by_rating(base, top_idx)
     props_rating = _pivot_props_from_rating(pv_rating)
 
-    # Gráficos
     _plot_barh_top_counts(pv_counts, os.path.join(outdir_q8, "q8_top_actores_count_barh.png"))
     _plot_heatmap_actors_ratings(pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_heatmap.png"))
-    # Donuts (círculos) de resumen
     _plot_donut_ratings( pv_rating, os.path.join(outdir_q8, "q8_top_actores_rating_donut.png"))
     _plot_donut_types(base, top_idx, os.path.join(outdir_q8, "q8_top_actores_type_donut.png"))
 
     return {
-        "base": base,              # DF expandido con cast_final
-        "ranking": pv_counts,      # actor × Total (asc para barh)
-        "pv_rating": pv_rating,    # actor × ratings (+ Total)
-        "props_rating": props_rating,  # proporciones por rating (filas suman 1)
+        "base": base,              
+        "ranking": pv_counts,
+        "pv_rating": pv_rating,
+        "props_rating": props_rating,
     }

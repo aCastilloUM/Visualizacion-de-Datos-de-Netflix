@@ -1,8 +1,7 @@
-# Utilidades de estilo para los gráficos (paleta Netflix y notas de fuente)
-
+# Utilidades de estilo para los gráficos 
 import matplotlib.pyplot as plt
 
-# Paleta Netflix (centralizada aquí por si querés reusar en todo el proyecto)
+# Paleta Netflix 
 COLOR_BG = "#f5f5f1"
 COLOR_MOVIE = "#e50914"
 COLOR_MOVIE_ALT = "#b20710"

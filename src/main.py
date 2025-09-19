@@ -16,13 +16,17 @@ from questions import q10_palabras as q10
 
 DATA_PATH = os.getenv(
     "DATA_PATH",
-    r"C:\Users\Usuario\OneDrive - Universidad de Montevideo\Analisis de Datos\netflix (2).csv"
+    r"C:\Users\agust\OneDrive\Escritorio\Estudio\Semestres\6to Semestre\Análisis de Datos\netflix.csv"
 )
 OUTDIR = os.getenv("OUTDIR", "outputs")
 
 
 def main():
+    print()
+    print("Cargando dataset...")
     df = pd.read_csv(DATA_PATH)
+    print(f"Dataset cargado desde '{DATA_PATH}' con {len(df)} filas y {len(df.columns)} columnas.")
+    print()
 
     # --- Pregunta 1 ----
     pivot_q1 = q1.run(df, outdir=OUTDIR)
@@ -60,7 +64,7 @@ def main():
 
     # ---- Pregunta 6 ----
     pivot_q6 = q6.run(df, outdir=OUTDIR)
-    print("[Q6] tabla mes×categoría (shape):", pivot_q6["tabla_mes_categoria"].shape)
+    print("[Q6] tabla mes×categoría")
     print("[Q6] totales por mes (primeros):")
     print(pivot_q6["totales_mes"].head())
     print()
@@ -90,11 +94,9 @@ def main():
     print("[Q10] Top palabras en títulos y descripciones:")
     print()
     print("Palabras en Títulos:")
-    print()
     print(res_q10["top_words_titles"].tail())        # últimas = más frecuentes
     print()
     print("Palabras en Descripciones:")
-    print()
     print(res_q10["top_words_descriptions"].tail())
     print()
 

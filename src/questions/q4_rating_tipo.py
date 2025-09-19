@@ -1,17 +1,24 @@
-# -*- coding: utf-8 -*-
 # Pregunta 4:
 # ¿Qué tipo de contenido es más común para cada rating?
-# - Reutiliza utils.cleaning.normalize_and_explode_ratings
-# - Gráficos: barras agrupadas (conteos) + barras apiladas 100% (proporciones)
-# - Salidas: outputs/q4/q4_rating_tipo_grouped_barh.png, outputs/q4/q4_rating_tipo_stacked100.png
-# - Interfaz: run(df, outdir="outputs") -> {"counts": pivot_counts, "props": pivot_props}
+
+# Pipeline:
+# 1. Limpiar y normalizar ratings con normalize_and_explode_ratings
+# 2. Calcular pivote de conteos y proporciones por tipo y rating
+# 3. Graficar barras agrupadas y apiladas 100%
+# 4. Devolver los DataFrames de conteos y proporciones
+
+# Outputs:
+# - outputs/q4/q4_rating_tipo_grouped_barh.png
+# - outputs/q4/q4_rating_tipo_stacked100.png
+#
+# Cleaning:
+# - cl.normalize_and_explode_ratings(df): Normaliza los ratings y explota múltiples valores para agrupar correctamente por tipo de contenido.
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
 from utils import plot_style as ps
 from utils import cleaning as cl
 
@@ -22,9 +29,10 @@ def _prepare_ratings(df: pd.DataFrame) -> pd.DataFrame:
 
     dfx = df.dropna(subset=["rating", "type"]).copy()
     dfx["type"] = dfx["type"].astype(str).str.strip()
-    dfx = cl.normalize_and_explode_ratings(dfx)  # agrega rating_norm
+    dfx = cl.normalize_and_explode_ratings(dfx)  
     return dfx
 
+# Agrupa por rating_norm y tipo, calcula totales y ordena por Total desc
 def _pivot_counts(dfx: pd.DataFrame) -> pd.DataFrame:
     grp = dfx.groupby(["rating_norm", "type"], as_index=False).size()
     pivot = grp.pivot(index="rating_norm", columns="type", values="size").fillna(0).astype(int)
@@ -37,13 +45,13 @@ def _pivot_counts(dfx: pd.DataFrame) -> pd.DataFrame:
     pivot = pivot.sort_values("Total", ascending=False)
     return pivot[["Movie", "TV Show", "Total"]]
 
+# Calcula proporciones de Movie y TV Show por rating_norm
 def _pivot_props(pivot_counts: pd.DataFrame) -> pd.DataFrame:
     pc = pivot_counts[pivot_counts["Total"] > 0].copy()
     pc["Movie_pct"] = pc["Movie"] / pc["Total"]
     pc["TV_pct"]    = pc["TV Show"] / pc["Total"]
     return pc[["Movie_pct", "TV_pct", "Total"]]
 
-# Plots 
 
 def _plot_grouped_barh_counts(pivot_counts: pd.DataFrame, outpath: str) -> None:
     if pivot_counts.empty:

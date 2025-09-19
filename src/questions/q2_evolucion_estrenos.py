@@ -1,24 +1,30 @@
-# -*- coding: utf-8 -*-
-# Pregunta 2: ¿Cómo evolucionó la cantidad de estrenos a lo largo del tiempo para cada tipo de contenido?
-# - Usa utils.cleaning.add_year_and_month para extraer year_added
-# - Usa utils.plot_style para estilo y nota de fuente
-# - Salidas: outputs/q2/q2_lineas_estrenos.png y outputs/q2/q2_area_apilada.png
-# - Interfaz: run(df, outdir="outputs") -> devuelve pivot con columnas ['Movie','TV Show']
+# Pregunta 2:
+# ¿Cómo evolucionó la cantidad de estrenos a lo largo del tiempo para cada tipo de contenido?
+
+# Pipeline:
+# 1. Limpiar y extraer año y mes de agregado con add_year_and_month
+# 2. Calcular tabla pivote por año y tipo de contenido
+# 3. Graficar líneas y área apilada
+# 4. Devolver el DataFrame pivot
+
+# Outputs:
+# - outputs/q2/q2_lineas_estrenos.png
+# - outputs/q2/q2_area_apilada.png
+
+# Cleaning:
+# - cl.add_year_and_month(df): Extrae las columnas 'year_added' y 'month_added' a partir de 'date_added' para poder agrupar los estrenos por año.
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
 from utils import plot_style as ps
 from utils import cleaning as cl
 
+# Genera una tabla por año con conteos de Movie y TV Show a partir de 'date_added'.
 def _aggregate_releases_by_year_and_type(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Genera una tabla por año con conteos de Movie y TV Show a partir de 'date_added'.
-    """
-    df2 = cl.add_year_and_month(df)  # añade year_added y month_added desde date_added
+    df2 = cl.add_year_and_month(df)  
     grp = (
         df2.dropna(subset=["year_added", "type"])
            .groupby(["year_added", "type"], as_index=False)
@@ -47,7 +53,7 @@ def _plot_lines(pivot: pd.DataFrame, outpath: str) -> None:
     ax.grid(True, alpha=0.3)
     ax.legend()
 
-    ps.add_source_note()  # "Fuente: Netflix dataset"
+    ps.add_source_note()  
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()

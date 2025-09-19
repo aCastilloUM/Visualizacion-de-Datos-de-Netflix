@@ -23,7 +23,6 @@ COUNTRY_ALIASES: Dict[str, str] = {
     "Bolivia, Plurinational State Of": "Bolivia",
     "Venezuela, Bolivarian Republic Of": "Venezuela",
     "Syrian Arab Republic": "Syria",
-    # Español
     "Estados Unidos": "United States","Reino Unido": "United Kingdom",
     "Corea Del Sur": "South Korea","Emiratos Arabes Unidos": "United Arab Emirates",
     "Republica Checa": "Czech Republic",
@@ -45,6 +44,85 @@ CANON_COUNTRIES: List[str] = [
     "Armenia","Azerbaijan","Georgia","Kazakhstan","Uzbekistan","Kyrgyzstan","Mongolia",
     "Macau","Malta","Cyprus","Liechtenstein","Andorra","Monaco","San Marino","Vatican City"
 ]
+
+# ---------------- listed_in to género canónico (ES) ----------------
+LISTED_IN_TO_CANON_GENRE = {
+    # Cine/TV por género principal
+    "Comedies": "Comedia",
+    "TV Comedies": "Comedia",
+    "Dramas": "Drama",
+    "TV Dramas": "Drama",
+    "Horror Movies": "Terror",
+    "TV Horror": "Terror",
+    "Thrillers": "Thriller",
+    "TV Thrillers": "Thriller",
+    "Crime TV Shows": "Crimen/Misterio",
+    "TV Mysteries": "Crimen/Misterio",
+
+    # Acción / Aventura
+    "Action & Adventure": "Acción/Aventura",
+    "TV Action & Adventure": "Acción/Aventura",
+
+    # Sci-Fi & Fantasy
+    "Sci-Fi & Fantasy": "Ciencia Ficción/Fantasía",
+    "TV Sci-Fi & Fantasy": "Ciencia Ficción/Fantasía",
+
+    # Romance
+    "Romantic Movies": "Romance",
+    "Romantic TV Shows": "Romance",
+
+    # Documental / Docuseries / Ciencia & Naturaleza
+    "Documentaries": "Documental",
+    "Docuseries": "Documental",
+    "Science & Nature TV": "Ciencia/Naturaleza",
+
+    # Infantil / Familiar
+    "Children & Family Movies": "Infantil/Familiar",
+    "Kids' TV": "Infantil/Familiar",
+    "Teen TV Shows": "Infantil/Familiar",
+
+    # Anime
+    "Anime Features": "Anime",
+    "Anime Series": "Anime",
+
+    # Música / Deportes / Reality
+    "Music & Musicals": "Música",
+    "Sports Movies": "Deportes",
+    "Reality TV": "Reality",
+
+    # Stand-Up
+    "Stand-Up Comedy": "Stand-Up",
+    "Stand-Up Comedy & Talk Shows": "Stand-Up",
+
+    # Internacional / Regional
+    "International Movies": "Internacional/Regional",
+    "International TV Shows": "Internacional/Regional",
+    "British TV Shows": "Internacional/Regional",
+    "Korean TV Shows": "Internacional/Regional",
+    "Spanish-Language TV Shows": "Internacional/Regional",
+
+    # Clásicos / Culto / Independiente
+    "Classic Movies": "Clásicos/Culto",
+    "Cult Movies": "Clásicos/Culto",
+    "Classic & Cult TV": "Clásicos/Culto",
+    "Independent Movies": "Independiente",
+
+    # Fe / Espiritualidad
+    "Faith & Spirituality": "Fe/Espiritualidad",
+
+    "TV Shows": "TV (General)",  
+}
+
+# ---------------- Text Mining (EN) ----------------
+
+ENGLISH_STOPWORDS = {
+    "the","a","an","and","or","but","if","then","else","when","while","for","to","from","of","in","on","at","by","with","as","is","are","was","were","be","been","being",
+    "this","that","these","those","it","its","they","them","their","there","here","you","your","we","our","us","he","she","his","her","i","me","my",
+    "not","no","yes","do","does","did","doing","done","can","could","should","would","may","might","will","just","than","so","such","only","very","more","most","much","many",
+    "into","over","under","between","through","about","across","after","before","again","once","also","all","any","both","each","few","other","some","own","same","too","up","down","out","off",
+    "film","movie","series","season","seasons","episode","episodes","show","netflix",
+}
+
 
 def _strip_accents(s: str) -> str:
     import unicodedata
@@ -128,12 +206,6 @@ def explode_listed_in(df: pd.DataFrame) -> pd.DataFrame:
 
 # ---------------- Directores ----------------
 def expand_and_normalize_directors(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Divide 'director' cuando hay múltiples nombres separados por coma,
-    limpia espacios, y crea 'director_final'. No forzamos Title Case para
-    no arruinar siglas o apellidos compuestos; solo colapsamos espacios.
-    Requiere columna: ['director'] (puede contener NaN).
-    """
     dfx = df.copy()
     dfx["director"] = dfx["director"].fillna("").astype(str)
     dfx["director_tokens"] = dfx["director"].str.split(",")
@@ -147,14 +219,22 @@ def expand_and_normalize_directors(df: pd.DataFrame) -> pd.DataFrame:
     dfx = dfx[dfx["director_final"] != ""].copy()
     return dfx
 
+def map_listed_in_to_genre_token(token: str) -> str:
+    if not isinstance(token, str):
+        return ""
+    t = token.strip()
+    if not t:
+        return ""
+    return LISTED_IN_TO_CANON_GENRE.get(t, t)
+
+def add_genre_from_listed_in(df: pd.DataFrame, listed_col: str = "listed_in") -> pd.DataFrame:
+    dfx = df.copy()
+    dfx["genre_main"] = dfx[listed_col].map(map_listed_in_to_genre_token)
+    dfx = dfx[dfx["genre_main"].astype(str).str.strip() != ""]
+    return dfx
+
 # ---------------- Map ratings a audiencias ----------------
 def map_rating_to_audience(rating: str, mode: str = "adult_kids") -> str:
-    """
-    Mapea un rating normalizado a una categoría de audiencia.
-    - mode="adult_kids": solo Adulto o Infantil.
-    - Si el rating no se reconoce, se clasifica como Adulto por defecto.
-    """
-
     if not isinstance(rating, str) or rating.strip() == "":
         return "Adulto"
 
@@ -168,16 +248,12 @@ def map_rating_to_audience(rating: str, mode: str = "adult_kids") -> str:
     elif r in adultos:
         return "Adulto"
     else:
-        # Ratings como PG-13, NR, etc. los tratamos como adultos por defecto
+        # Ratings como PG-13, NR, son tratados como adultos por defecto
         return "Adulto"
 
 # ---------------- Elenco / Actores ----------------
 def expand_and_normalize_cast(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Divide la columna 'cast' cuando hay múltiples nombres separados por coma
-    y crea 'cast_final' limpio (trim + colapso de espacios).
-    Requiere columna: ['cast'] (puede venir con NaN).
-    """
+
     dfx = df.copy()
     dfx["cast"] = dfx["cast"].fillna("").astype(str)
     dfx["cast_tokens"] = dfx["cast"].str.split(",")
@@ -192,19 +268,8 @@ def expand_and_normalize_cast(df: pd.DataFrame) -> pd.DataFrame:
     return dfx
 
 # ---------------- Duraciones ----------------
-
-
 def normalize_duration(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normaliza 'type' y parsea 'duration' según los formatos del dataset:
-      - Películas: 'N min'      -> duration_minutes = N
-      - Series:    'N Season(s)'-> duration_seasons = N
-
-    NOTA: según tus ejemplos no aparecen horas ('1h 30m'), por eso simplificamos.
-    """
     dfx = df.copy()
-
-    # 1) Normalizar 'type' a valores canónicos
     def _norm_type(x: str) -> str:
         s = str(x).strip().lower().replace("-", " ")
         s = re.sub(r"\s+", " ", s)
@@ -212,11 +277,11 @@ def normalize_duration(df: pd.DataFrame) -> pd.DataFrame:
             return "Movie"
         if s in {"tv show", "tv shows", "serie", "series"}:
             return "TV Show"
-        return str(x).strip()  # fallback si viene algo raro
+        return str(x).strip() 
 
     dfx["type"] = dfx["type"].map(_norm_type)
 
-    # 2) Normalizar 'duration' -> str lowercase
+    # Normalizar duration a str lowercase
     dur = dfx["duration"].fillna("").astype(str).str.strip()
     dur_low = dur.str.lower()
 
@@ -224,14 +289,12 @@ def normalize_duration(df: pd.DataFrame) -> pd.DataFrame:
     dfx["duration_minutes"] = np.nan
     dfx["duration_seasons"] = np.nan
 
-    # 3) Parseo directo según el texto
-    #    a) Minutos: 'NN min'
+ 
     is_min = dur_low.str.contains(r"\bmin\b")
     dfx.loc[is_min, "duration_minutes"] = (
         dur_low[is_min].str.extract(r"(\d+)\s*min", expand=False).astype(float)
     )
 
-    #    b) Temporadas: 'N Season' / 'N Seasons'
     is_season = dur_low.str.contains(r"season")
     dfx.loc[is_season, "duration_seasons"] = (
         dur_low[is_season].str.extract(r"(\d+)\s*season", expand=False).astype(float)
@@ -240,46 +303,25 @@ def normalize_duration(df: pd.DataFrame) -> pd.DataFrame:
     return dfx
 
 
-# ---------------- Text Mining (EN) ----------------
-
-
-ENGLISH_STOPWORDS = {
-    # básicos comunes
-    "the","a","an","and","or","but","if","then","else","when","while","for","to","from","of","in","on","at","by","with","as","is","are","was","were","be","been","being",
-    "this","that","these","those","it","its","they","them","their","there","here","you","your","we","our","us","he","she","his","her","i","me","my",
-    "not","no","yes","do","does","did","doing","done","can","could","should","would","may","might","will","just","than","so","such","only","very","more","most","much","many",
-    "into","over","under","between","through","about","across","after","before","again","once","also","all","any","both","each","few","other","some","own","same","too","up","down","out","off",
-    # típicas del dominio
-    "film","movie","series","season","seasons","episode","episodes","show","netflix",
-}
-
 _WORD_RE = re.compile(r"[a-z]+")
 
+# Minusculas, solo letras a-z, split simple 
 def normalize_to_words_en(text: str, min_len: int = 3) -> list[str]:
-    """
-    Minúsculas, solo letras a-z, split simple; filtra stopwords EN y tokens cortos.
-    """
+    
     if not isinstance(text, str) or not text:
         return []
     s = text.lower()
-    # Conservamos solo letras a-z (ascii); números/puntuación se eliminan
     tokens = _WORD_RE.findall(s)
     out = [t for t in tokens if len(t) >= min_len and t not in ENGLISH_STOPWORDS]
     return out
 
 def count_top_words(series: pd.Series, topn: int = 20, min_len: int = 3) -> pd.Series:
-    """
-    Cuenta palabras de una serie de textos (en inglés), devolviendo un pd.Series
-    con los Top-N términos y sus frecuencias, ordenados asc para barh.
-    """
     counter = collections.Counter()
     for txt in series.dropna().astype(str):
         counter.update(normalize_to_words_en(txt, min_len=min_len))
     if not counter:
         return pd.Series(dtype=int)
-    # topn más frecuentes
     most_common = counter.most_common(topn)
     s = pd.Series({w: c for w, c in most_common}, dtype=int)
-    # ordenar asc para barh
     return s.sort_values(ascending=True)
 

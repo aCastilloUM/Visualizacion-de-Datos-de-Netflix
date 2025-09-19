@@ -1,28 +1,34 @@
 # Pregunta 6:
-# ¿Se identifica alguna estacionalidad en los estrenos según la categoría (listed_in)?
-# ¿Qué meses concentran más lanzamientos?
-# Gráficos: heatmap (mes × categoría) + barras por mes (totales)
-# Salidas: outputs/q6/q6_heatmap_categorias.png, outputs/q6/q6_barras_meses.png
+# ¿Se identifica alguna estacionalidad en los estrenos según la categoría (listed_in)? ¿Qué meses concentran más lanzamientos?
+
+# Pipeline:
+# 1. Limpiar y asegurar fechas con ensure_datetime
+# 2. Preparar datos de estacionalidad por mes y categoría
+# 3. Graficar heatmap (mes × categoría) y barras por mes
+# 4. Devolver los DataFrames de resultados
+
+# Outputs:
+# - outputs/q6/q6_heatmap_categorias.png
+# - outputs/q6/q6_barras_meses.png
+
+# Cleaning:
+# - cl.ensure_datetime(df, "date_added"): Convierte la columna de fechas a formato datetime para agrupar correctamente por mes.
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
 from utils import plot_style as ps
 from utils import cleaning as cl
 
+# Helpers
 def _month_labels():
     return ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
-#  Reindexa a meses 1..12. Soporta Series o DataFrames con index numérico de mes.
-
 def _ensure_month_order(obj):
-
     return obj.reindex(range(1, 13), fill_value=0)
 
-# Preparación
 def _prepare_estacionalidad(df: pd.DataFrame) -> pd.DataFrame:
 
     dfx = cl.ensure_datetime(df, "date_added")
@@ -30,9 +36,6 @@ def _prepare_estacionalidad(df: pd.DataFrame) -> pd.DataFrame:
     dfx["mes"] = dfx["date_added"].dt.month
     dfx = cl.explode_listed_in(dfx)  
     return dfx
-
-
-# Plots
 
 def _plot_heatmap_estacionalidad(df: pd.DataFrame, out_png_path: str):
     tabla = (

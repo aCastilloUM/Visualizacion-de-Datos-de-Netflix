@@ -1,91 +1,82 @@
-# -*- coding: utf-8 -*-
 # Pregunta 1:
 # ¿Cómo ha cambiado la proporción entre películas y series a lo largo de los años?
-# - Usa utils/plot_style.py (paleta + fuente)
-# - Sólo genera PNG en outputs/q1/
-# - Interfaz: run(df, outdir="outputs") -> devuelve DataFrame con proporciones
+
+# Pipeline:
+# 1. Calcular proporciones por año (release_year) y tipo
+# 2. Generar PNG en outputs/q1/q1_proportion_movies_series.png
+# 3. Devolver el DataFrame de proporciones 
+
+# Outputs:
+# - outputs/q1/q1_proportion_movies_series.png
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator, MultipleLocator
+from matplotlib.ticker import MaxNLocator, MultipleLocator, PercentFormatter
 from utils import plot_style as ps
 
-def _calcular_proporcion(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calcula proporción de películas/series por release_year.
-    Retorna DataFrame con columnas: Movie, TV Show, total, prop_peliculas, prop_series
-    """
+
+# Calcula la proporción de películas/series por release_year, devuelve DataFrame con columnas: Movie, TV Show, total, prop_movies, prop_series
+def calculate_proportion(df):
     if "release_year" not in df.columns or "type" not in df.columns:
-        raise ValueError("El DataFrame debe contener 'release_year' y 'type'.")
+        raise ValueError("DataFrame must contain 'release_year' and 'type'.")
 
     dfx = df.copy()
-    # Normalización defensiva
     dfx["type"] = dfx["type"].astype(str).str.strip()
     dfx = dfx.dropna(subset=["release_year", "type"])
     dfx["release_year"] = dfx["release_year"].astype(int)
 
-    conteo = (
+    counts = (
         dfx.groupby(["release_year", "type"])
            .size()
            .unstack(fill_value=0)
            .sort_index()
     )
-    # Garantizar columnas
     for col in ("Movie", "TV Show"):
-        if col not in conteo.columns:
-            conteo[col] = 0
+        if col not in counts.columns:
+            counts[col] = 0
 
-    conteo["total"] = conteo["Movie"] + conteo["TV Show"]
-    # Evitar división por cero
-    conteo = conteo[conteo["total"] > 0].copy()
-    conteo["prop_peliculas"] = conteo["Movie"] / conteo["total"]
-    conteo["prop_series"]   = conteo["TV Show"] / conteo["total"]
-    return conteo[["Movie", "TV Show", "total", "prop_peliculas", "prop_series"]]
+    counts["total"] = counts["Movie"] + counts["TV Show"]
+    counts = counts[counts["total"] > 0].copy()
+    counts["prop_movies"] = counts["Movie"] / counts["total"]
+    counts["prop_series"] = counts["TV Show"] / counts["total"]
+    return counts[["Movie", "TV Show", "total", "prop_movies", "prop_series"]]
 
-def _graficar_proporcion(conteo: pd.DataFrame, outpath: str) -> None:
-    """
-    Gráfico de líneas de proporciones por año: Películas vs Series.
-    """
-    if conteo.empty:
+
+def plot_proportion(counts, outpath):
+    if counts.empty:
         return
 
     plt.figure(figsize=(10, 6), facecolor=ps.COLOR_BG)
     ax = plt.gca()
     ps.apply_netflix_style(ax)
 
-    # Series en español, colores consistentes con el resto del proyecto
-    ax.plot(conteo.index, conteo["prop_peliculas"], label="Películas", linewidth=2, color=ps.COLOR_MOVIE)
-    ax.plot(conteo.index, conteo["prop_series"],   label="Series",    linewidth=2, color=ps.COLOR_TV)
+    ax.plot(counts.index, counts["prop_movies"], label="Movies", linewidth=2, color=ps.COLOR_MOVIE)
+    ax.plot(counts.index, counts["prop_series"], label="Series", linewidth=2, color=ps.COLOR_TV)
 
     ax.set_ylim(0, 1)
     ax.yaxis.set_major_locator(MultipleLocator(0.1))
-    ax.set_yticklabels([f"{int(y*100)}%" for y in ax.get_yticks()])
+    ax.yaxis.set_major_formatter(PercentFormatter(1.0))
 
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel("Año de lanzamiento", color=ps.COLOR_TV)
-    ax.set_ylabel("Proporción", color=ps.COLOR_TV)
-    ax.set_title("Proporción de películas y series por año", fontsize=13, color=ps.COLOR_TV)
+    ax.set_xlabel("Release year", color=ps.COLOR_TV)
+    ax.set_ylabel("Proportion", color=ps.COLOR_TV)
+    ax.set_title("Proportion of movies and series by year", fontsize=13, color=ps.COLOR_TV)
 
     ax.grid(True, axis="y", alpha=0.2, linestyle="--")
-    ax.legend(title="Tipo de contenido")
+    ax.legend(title="Content type")
 
     ps.add_source_note()
     plt.tight_layout()
     plt.savefig(outpath, dpi=220, facecolor=ps.COLOR_BG)
     plt.close()
 
-def run(df: pd.DataFrame, outdir: str = "outputs") -> pd.DataFrame:
-    """
-    Pipeline Q1:
-    - Calcula proporciones por año (release_year) y type
-    - Genera PNG en outputs/q1/q1_proporcion_peliculas_series.png
-    - Devuelve el DataFrame de proporciones (para inspección/test)
-    """
+
+def run(df, outdir="outputs"):
     outdir_q1 = os.path.join(outdir, "q1")
     os.makedirs(outdir_q1, exist_ok=True)
 
-    conteo = _calcular_proporcion(df)
-    _graficar_proporcion(conteo, os.path.join(outdir_q1, "q1_proporcion_peliculas_series.png"))
-    return conteo
+    counts = calculate_proportion(df)
+    plot_proportion(counts, os.path.join(outdir_q1, "q1_proportion_movies_series.png"))
+    return counts

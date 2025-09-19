@@ -1,27 +1,28 @@
 # Pregunta 10:
 # ¿Hay palabras que se utilicen más que otras en títulos y descripciones?
 #
-# - Limpieza/tokenización EN: utils.cleaning.count_top_words
-# - Gráficos: 2 barh (Top 20) para títulos y para descripciones
+# Pipeline:
+# 1. Limpiar y tokenizar textos con count_top_words
+# 2. Calcular las palabras más frecuentes en títulos y descripciones
+# 3. Graficar los Top-N en dos gráficos de barras horizontales
+# 4. Devolver un diccionario con las Series de frecuencias
 #
-# Salidas:
+# Outputs:
 # - outputs/q10/q10_top_words_titles.png
 # - outputs/q10/q10_top_words_descriptions.png
 #
-# Pipeline Q10:
-# Cuenta palabras más frecuentes en títulos (title) y descripciones (description)
-# Genera 2 barh con Top-N
-# Devuelve dict con las Series de frecuencias
+# Cleaning:
+# - cl.count_top_words(series): Tokeniza y cuenta las palabras más frecuentes en una serie de textos en inglés, filtrando palabras cortas y stopwords.
 
 from __future__ import annotations
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
 from utils import plot_style as ps
 from utils import cleaning as cl
 
+# Gráfico de barras horizontales para frecuencias de palabras
 def _plot_top_words_barh(freqs: pd.Series, title: str, color: str, outpath: str):
     if freqs is None or freqs.empty:
         return
@@ -50,7 +51,6 @@ def run(df: pd.DataFrame, outdir: str = "outputs", topn: int = 20) -> dict:
     if "title" not in df.columns or "description" not in df.columns:
         raise ValueError("El DataFrame debe contener 'title' y 'description'.")
 
-    # Top palabras (EN) en títulos y descripciones
     top_titles = cl.count_top_words(df["title"],   topn=topn, min_len=3)
     top_desc   = cl.count_top_words(df["description"], topn=topn, min_len=3)
 
