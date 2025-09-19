@@ -66,6 +66,7 @@ def _plot_hist_movies(df: pd.DataFrame, outpath: str) -> dict:
     ps.apply_netflix_style(ax)
 
     n_bins = 60
+
     counts, bins, patches = ax.hist(
         data,
         bins=n_bins,
@@ -73,6 +74,12 @@ def _plot_hist_movies(df: pd.DataFrame, outpath: str) -> dict:
         edgecolor="#000000",   
         alpha=0.9
     )
+
+    # Etiquetas arriba de cada barra
+    for rect, count in zip(patches, counts):
+        if count > 0:
+            ax.text(rect.get_x() + rect.get_width() / 2, rect.get_height(),
+                    f"{int(count)}", ha="center", va="bottom", fontsize=8, color="#222")
 
     ax.set_xlabel("Duración (minutos)", color=ps.COLOR_TV)
     ax.set_ylabel("# Películas", color=ps.COLOR_TV)
@@ -102,6 +109,7 @@ def _plot_hist_tvshows(df: pd.DataFrame, outpath: str) -> dict:
     ax = plt.gca()
     ps.apply_netflix_style(ax)
 
+
     counts, bins, patches = ax.hist(
         data,
         bins=bins,
@@ -109,6 +117,12 @@ def _plot_hist_tvshows(df: pd.DataFrame, outpath: str) -> dict:
         edgecolor="#000000",   
         alpha=0.9
     )
+
+    # Etiquetas arriba de cada barra
+    for rect, count in zip(patches, counts):
+        if count > 0:
+            ax.text(rect.get_x() + rect.get_width() / 2, rect.get_height(),
+                    f"{int(count)}", ha="center", va="bottom", fontsize=8, color="#222")
 
     ax.set_xlabel("Cantidad de temporadas", color=ps.COLOR_TV)
     ax.set_ylabel("# Series", color=ps.COLOR_TV)

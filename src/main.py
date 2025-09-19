@@ -2,7 +2,6 @@
 import os
 import pandas as pd
 
-# Importá cada pregunta como módulos independientes
 from questions import q1_proporcion_peliculas_series as q1
 from questions import q2_evolucion_estrenos as q2
 from questions import q3_paises as q3
@@ -44,7 +43,6 @@ def main():
     pivot_q3 = q3.run(df, outdir=OUTDIR)
     print("[Q3] Top países (primeras filas):")
     print("[Q3] Resultados disponibles:", list(pivot_q3.keys()))
-    # Mostramos un preview de cada uno
     for name, df_top in pivot_q3.items():
         print(f"\n[Q3] {name} (últimas filas para ver los más altos):")
         print(df_top.tail())  
@@ -94,7 +92,7 @@ def main():
     print("[Q10] Top palabras en títulos y descripciones:")
     print()
     print("Palabras en Títulos:")
-    print(res_q10["top_words_titles"].tail())        # últimas = más frecuentes
+    print(res_q10["top_words_titles"].tail())        
     print()
     print("Palabras en Descripciones:")
     print(res_q10["top_words_descriptions"].tail())
